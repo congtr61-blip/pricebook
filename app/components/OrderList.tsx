@@ -30,7 +30,7 @@ const statusLabels: Record<string, string> = {
   cancelled: '已取消',
 }
 
-export function OrderList({ orders }: { orders: Order[] }) {
+export function OrderList({ orders, locale = 'zh' }: { orders: Order[]; locale?: 'zh' | 'en' }) {
   const [busyIds, setBusyIds] = useState<Record<string, boolean>>({})
   const [message, setMessage] = useState('')
 
@@ -52,13 +52,13 @@ export function OrderList({ orders }: { orders: Order[] }) {
       <div className="section-heading order-heading">
         <div>
           <p className="eyebrow">My Orders</p>
-          <h2>我的订单</h2>
+          <h2>{locale === 'zh' ? '我的订单' : 'My orders'}</h2>
         </div>
       </div>
 
       <div className="orders-list">
         {orders.length === 0 ? (
-          <p className="empty-state">暂无订单</p>
+          <p className="empty-state">{locale === 'zh' ? '暂无订单' : 'No orders yet'}</p>
         ) : (
           orders.map((order) => (
             <details className={`order-card ${order.status === 'cancelled' ? 'is-cancelled' : ''}`} key={order.id}>
@@ -66,7 +66,7 @@ export function OrderList({ orders }: { orders: Order[] }) {
                 <div className="order-card-top">
                   <div>
                     <strong>订单 {order.id.slice(0, 8)}</strong>
-                    <small className={`order-status status-${order.status}`}>{statusLabels[order.status] ?? order.status}</small>
+                    <small className={`order-status status-${order.status}`}>{locale === 'zh' ? (statusLabels[order.status] ?? order.status) : ({ pending: 'Pending', confirmed: 'Confirmed', cancelled: 'Cancelled' }[order.status] ?? order.status)}</small>
                   </div>
                   <span className="order-total">¥ {Number(order.total).toFixed(2)}</span>
                 </div>

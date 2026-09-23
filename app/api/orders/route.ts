@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const { data, error } = await createOrder({
     merchantId: user.id,
     items: payload.items,
-    note: payload.note ?? undefined,
+    note: typeof payload.note === 'string' ? payload.note.trim() || undefined : undefined,
     pickupTime: payload.pickup_time ?? null,
   })
 

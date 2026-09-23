@@ -3,7 +3,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Pricebook',
-  description: 'Merchant pricebook management',
+  description: 'Pricebook management for merchants',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

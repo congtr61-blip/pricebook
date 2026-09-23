@@ -10,9 +10,10 @@ type Product = {
   stock: number
 }
 
-export function MerchantOrderPanel({ products }: { products: Product[] }) {
+export function MerchantOrderPanel({ products, locale = 'zh' }: { products: Product[]; locale?: 'zh' | 'en' }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [pickupTime, setPickupTime] = useState('')
+  const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -38,6 +39,7 @@ export function MerchantOrderPanel({ products }: { products: Product[] }) {
       body: JSON.stringify({
         items: selectedItems,
         pickup_time: pickupTime || null,
+        note,
       }),
     })
 
@@ -52,6 +54,7 @@ export function MerchantOrderPanel({ products }: { products: Product[] }) {
     setMessage('订单提交成功')
     setQuantities({})
     setPickupTime('')
+    setNote('')
     window.location.reload()
   }
 
@@ -60,7 +63,7 @@ export function MerchantOrderPanel({ products }: { products: Product[] }) {
       <div className="section-heading order-heading">
         <div>
           <p className="eyebrow">Order</p>
-          <h2>快捷下单</h2>
+          <h2>{locale === 'zh' ? '快捷下单' : 'Quick order'}</h2>
         </div>
       </div>
 
@@ -69,7 +72,7 @@ export function MerchantOrderPanel({ products }: { products: Product[] }) {
           <div className="order-item" key={product.id}>
             <div>
               <strong>{product.name}</strong>
-              <small>{product.unit} · 库存 {product.stock}</small>
+              <small>{product.unit} · {locale === 'zh' ? '库存' : 'Stock'} {product.stock}</small>
             </div>
             <div className="qty-control">
               <button type="button" onClick={() => setQuantities({ ...quantities, [product.id]: Math.max(0, (quantities[product.id] ?? 0) - 1) })}>-</button>
@@ -90,12 +93,17 @@ export function MerchantOrderPanel({ products }: { products: Product[] }) {
       </div>
 
       <label className="pickup-field">
-        <span>取货时间</span>
-        <input type="datetime-local" value={pickupTime} onChange={(event) => setPickupTime(event.target.value)} />
+        <span>{locale === 'zh' ? '取货时间' : 'Pickup time'}</span>
+        <input type="datetime-local" value={pickupTime} min={new Date().toISOString().slice(0, 16)} onChange={(event) => setPickupTime(event.target.value)} />
+      </label>
+
+      <label className="note-field">
+        <span>{locale === 'zh' ? '客户备注' : 'Order note'}</span>
+        <textarea value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} placeholder={locale === 'zh' ? '例如：请分装、到货后电话联系' : 'For example: call when ready'} />
       </label>
 
       <button type="button" className="button dark full" onClick={submitOrder} disabled={loading}>
-        {loading ? '提交中...' : '提交订单'}
+        {loading ? (locale === 'zh' ? '提交中...' : 'Submitting...') : (locale === 'zh' ? '提交订单' : 'Submit order')}
       </button>
 
       {message && <p className={message.includes('失败') || message.includes('请先') ? 'save-message error' : 'save-message'}>{message}</p>}

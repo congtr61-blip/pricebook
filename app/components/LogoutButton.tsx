@@ -9,5 +9,5 @@ export function LogoutButton() {
     window.location.assign('/login')
   }
 
-  return <button className="logout-button" onClick={handleLogout}>退出登录</button>
+  return <button className="logout-button" onClick={handleLogout}>退出 / Log out</button>
 }

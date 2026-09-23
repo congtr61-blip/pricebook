@@ -6,8 +6,11 @@ type OrderItem = { product_name: string; quantity: number; unit: string }
 type Order = {
   id: string
   merchant_name: string
+  merchant_phone: string | null
+  merchant_tag: string | null
   status: string
   total: number
+  note: string | null
   created_at: string
   pickup_time: string | null
   items: OrderItem[]
@@ -25,7 +28,7 @@ const statusLabels: Record<string, string> = {
   cancelled: '已取消',
 }
 
-export function AdminOrderPanel({ initialOrders }: { initialOrders: Order[] }) {
+export function AdminOrderPanel({ initialOrders, locale = 'zh' }: { initialOrders: Order[]; locale?: 'zh' | 'en' }) {
   const [orders, setOrders] = useState(initialOrders)
   const [busyIds, setBusyIds] = useState<Record<string, boolean>>({})
   const [message, setMessage] = useState('')
@@ -54,18 +57,19 @@ export function AdminOrderPanel({ initialOrders }: { initialOrders: Order[] }) {
       <div className="section-heading order-heading">
         <div>
           <p className="eyebrow">Admin</p>
-          <h2>订单管理</h2>
+          <h2>{locale === 'zh' ? '订单管理' : 'Order management'}</h2>
         </div>
       </div>
 
       <div className="orders-list">
-        {orders.length === 0 ? (<p className="empty-state">暂无订单</p>) : orders.map((order) => (
+        {orders.length === 0 ? (<p className="empty-state">{locale === 'zh' ? '暂无订单' : 'No orders yet'}</p>) : orders.map((order) => (
           <details className={`order-card ${order.status === 'cancelled' ? 'is-cancelled' : ''}`} key={order.id}>
             <summary className="order-summary">
               <div className="order-card-top">
                 <div>
                   <strong>{order.merchant_name}</strong>
-                  <small className={`order-status status-${order.status}`}>{statusLabels[order.status] ?? order.status}</small>
+                  <small>{order.merchant_tag ?? '未设置标签'}{order.merchant_phone ? ` · ${order.merchant_phone}` : ''}</small>
+                  <small className={`order-status status-${order.status}`}>{locale === 'zh' ? (statusLabels[order.status] ?? order.status) : ({ pending: 'Pending', confirmed: 'Confirmed', cancelled: 'Cancelled' }[order.status] ?? order.status)}</small>
                 </div>
                 <span className="order-total">¥ {Number(order.total).toFixed(2)}</span>
               </div>
@@ -82,6 +86,8 @@ export function AdminOrderPanel({ initialOrders }: { initialOrders: Order[] }) {
                 <span>下单：{dateFormatter.format(new Date(order.created_at))}</span>
                 <span>取货：{order.pickup_time ? dateFormatter.format(new Date(order.pickup_time)) : '未指定'}</span>
               </div>
+
+              {order.note && <p className="order-note">客户备注：{order.note}</p>}
 
               {order.status === 'pending' && (
                 <div className="admin-actions">

@@ -1,8 +1,8 @@
 # Pricebook 需求文档
 
-当前版本：**v2.0（已完成）**
+当前版本：**v3.0（已完成）**
 
-## v1（已完成）
+## v1.0（已完成）
 - [x] 商户登录，查看商品价格和库存
 - [x] 管理员编辑商品/库存
 - [x] 管理员为每个商户设置专属价格和标签
@@ -21,6 +21,16 @@
 - [x] 订单、留言日期使用固定时区格式，避免页面 hydration 错误
 - [x] 兼容手机屏幕展示
 
+
+## v3.0（已完成）
+- [x] 优化页面，现在看起来有点粗糙
+- [x] 输入框、日期选择和客户备注输入更友好
+- [x] 中英文切换按钮及核心页面文案切换
+- [x] 商户电话维护、订单备注录入，管理员订单详情展示商户标签和电话
+
+
+
+
 ## 数据库迁移
 
 请在 Supabase SQL Editor 中按需执行以下迁移文件：
@@ -29,3 +39,4 @@
 - `supabase/migrations/20260922_v2_admin_order_and_content.sql`
 - `supabase/migrations/20260922_fix_messages.sql`
 - `supabase/migrations/20260922_fix_order_inventory.sql`
+- `supabase/migrations/20260923_v3_profile_and_order_fields.sql`
