@@ -33,6 +33,14 @@ alter table public.business_hours enable row level security;
 alter table public.announcements enable row level security;
 alter table public.messages enable row level security;
 
+drop policy if exists "read own messages" on public.messages;
+drop policy if exists "insert merchant message" on public.messages;
+drop policy if exists "update own message read state" on public.messages;
+drop policy if exists "read business hours" on public.business_hours;
+drop policy if exists "admin write business hours" on public.business_hours;
+drop policy if exists "read announcements" on public.announcements;
+drop policy if exists "admin write announcements" on public.announcements;
+
 create policy "read own messages" on public.messages
 for select to authenticated
 using (merchant_id = auth.uid() or is_admin());
@@ -59,9 +67,9 @@ create policy "admin write announcements" on public.announcements
 for all to authenticated using (is_admin()) with check (is_admin());
 
 insert into public.business_hours (label, monday, tuesday, wednesday, thursday, friday, saturday, sunday)
-values ('营业时间', '09:00-18:00', '09:00-18:00', '09:00-18:00', '09:00-18:00', '09:00-18:00', '10:00-16:00', '休息')
-on conflict do nothing;
+select '营业时间', '09:00-18:00', '09:00-18:00', '09:00-18:00', '09:00-18:00', '09:00-18:00', '10:00-16:00', '休息'
+where not exists (select 1 from public.business_hours);
 
 insert into public.announcements (title, content, is_active)
-values ('欢迎', '欢迎使用 Pricebook，请提前确认取货时间。', true)
-on conflict do nothing;
+select '欢迎', '欢迎使用 Pricebook，请提前确认取货时间。', true
+where not exists (select 1 from public.announcements);

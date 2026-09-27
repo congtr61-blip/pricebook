@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { needsPasswordChange } from '@/lib/auth/account'
 
 function databaseError(error: { message: string }) {
   if (error.message.includes("Could not find the table 'public.messages'")) {
@@ -15,6 +16,9 @@ export async function GET() {
 
   if (userError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (await needsPasswordChange(supabase, user.id)) {
+    return NextResponse.json({ error: '请先修改初始密码', code: 'PASSWORD_CHANGE_REQUIRED' }, { status: 428 })
   }
 
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
@@ -39,6 +43,9 @@ export async function POST(request: Request) {
 
   if (userError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (await needsPasswordChange(supabase, user.id)) {
+    return NextResponse.json({ error: '请先修改初始密码', code: 'PASSWORD_CHANGE_REQUIRED' }, { status: 428 })
   }
 
   const payload = await request.json().catch(() => null)

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { needsPasswordChange } from '@/lib/auth/account'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -7,6 +8,9 @@ export async function POST(request: Request) {
 
   if (userError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (await needsPasswordChange(supabase, user.id)) {
+    return NextResponse.json({ error: '请先修改初始密码', code: 'PASSWORD_CHANGE_REQUIRED' }, { status: 428 })
   }
 
   const profile = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
@@ -21,8 +25,13 @@ export async function POST(request: Request) {
 
   if (payload.type === 'hours') {
     const { hours } = payload
+    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
+    if (!hours || dayKeys.some((day) => typeof hours[day] !== 'string' || hours[day].trim().length === 0 || hours[day].length > 40)) {
+      return NextResponse.json({ error: '请为每一天填写有效营业时间（最多 40 个字符）' }, { status: 400 })
+    }
+
     const { error } = await supabase.from('business_hours').upsert({
-      id: hours.id,
+      ...(typeof hours.id === 'string' ? { id: hours.id } : {}),
       monday: hours.monday,
       tuesday: hours.tuesday,
       wednesday: hours.wednesday,

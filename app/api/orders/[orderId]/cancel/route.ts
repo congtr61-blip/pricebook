@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { needsPasswordChange } from '@/lib/auth/account'
 
 export async function POST(_request: Request, { params }: { params: Promise<{ orderId: string }> }) {
   const supabase = await createClient()
@@ -7,6 +8,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ or
 
   if (userError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (await needsPasswordChange(supabase, user.id)) {
+    return NextResponse.json({ error: '请先修改初始密码', code: 'PASSWORD_CHANGE_REQUIRED' }, { status: 428 })
   }
 
   const { orderId } = await params

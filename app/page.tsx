@@ -9,6 +9,7 @@ import { AdminOrderPanel } from '@/app/components/AdminOrderPanel'
 import { BusinessAndNotice } from '@/app/components/BusinessAndNotice'
 import { MessageBoard } from '@/app/components/MessageBoard'
 import { LanguageToggle, type Locale } from '@/app/components/LanguageToggle'
+import { MerchantAccountManager } from '@/app/components/MerchantAccountManager'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 
@@ -21,7 +22,7 @@ type Product = {
   sort_order: number
 }
 
-type Profile = { id: string; username: string; phone: string | null; tag: string | null; is_admin: boolean }
+type Profile = { id: string; username: string; phone: string | null; tag: string | null; is_admin: boolean; must_change_password: boolean }
 type Merchant = Profile & { merchant_prices: { product_id: string; price: number }[] }
 type MerchantProduct = Product & { merchant_prices: { price: number }[] }
 
@@ -33,9 +34,10 @@ export default async function HomePage() {
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('id, username, phone, tag, is_admin').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('id, username, phone, tag, is_admin, must_change_password').eq('id', user.id).single()
 
   if (!profile) redirect('/login')
+  if (profile.must_change_password) redirect('/change-password')
 
   if (!profile.is_admin) {
     const { data: products } = await supabase.from('products').select('id, name, unit, base_price, stock, sort_order, merchant_prices(price)').order('sort_order')
@@ -58,7 +60,7 @@ export default async function HomePage() {
 
     return (
       <main className="shell">
-        <header className="topbar"><div><span className="kicker">PRICEBOOK / MERCHANT</span><h1>{locale === 'zh' ? '您好' : 'Hello'}，{profile.username}</h1></div><div className="topbar-actions"><span className="tag">{profile.tag ?? (locale === 'zh' ? '合作商户' : 'Merchant')}</span><LanguageToggle locale={locale} /><LogoutButton /></div></header>
+        <header className="topbar"><div><span className="kicker">PRICEBOOK / MERCHANT</span><h1>{locale === 'zh' ? '您好' : 'Hello'}，{profile.username}</h1></div><div className="topbar-actions"><span className="tag">{profile.tag ?? (locale === 'zh' ? '合作商户' : 'Merchant')}</span><a className="account-link" href="/change-password">{locale === 'zh' ? '修改密码' : 'Password'}</a><LanguageToggle locale={locale} /><LogoutButton /></div></header>
         <section className="intro"><p className="eyebrow">{locale === 'zh' ? '当前价目表' : 'CURRENT PRICEBOOK'}</p><h2>{locale === 'zh' ? '专属采购价格' : 'Your prices'}</h2><p>{locale === 'zh' ? '所有价格均为含税参考价，库存以实时数据为准。' : 'Tax-inclusive reference prices. Stock is updated in real time.'}</p></section>
         <section className="product-grid">{productList.map((product) => <ProductCard key={product.id} product={product} price={product.finalPrice} isCustom={product.isCustom} locale={locale} />)}</section>
         <div className="merchant-actions"><MerchantOrderPanel products={productList.map((product) => ({ id: product.id, name: product.name, unit: product.unit, base_price: product.finalPrice, stock: product.stock }))} locale={locale} /><OrderList locale={locale} orders={(orders ?? []).map((order) => ({
@@ -74,13 +76,13 @@ export default async function HomePage() {
             unit: item.unit,
           })),
         }))} /></div>
-        <div className="content-grid"><BusinessAndNotice businessHours={(businessHours ?? []) as any[]} announcements={(announcements ?? []) as any[]} /><MessageBoard initialMessages={(messages ?? []) as any[]} isAdmin={false} /></div>
+        <div className="content-grid"><BusinessAndNotice businessHours={(businessHours ?? []) as any[]} announcements={(announcements ?? []) as any[]} isAdmin={false} /><MessageBoard initialMessages={(messages ?? []) as any[]} isAdmin={false} /></div>
       </main>
     )
   }
 
   const { data: products } = await supabase.from('products').select('id, name, unit, base_price, stock, sort_order').order('sort_order')
-  const { data: merchants } = await supabase.from('profiles').select('id, username, phone, tag, is_admin, merchant_prices(product_id, price)').eq('is_admin', false).order('created_at')
+  const { data: merchants } = await supabase.from('profiles').select('id, username, phone, tag, is_admin, must_change_password, merchant_prices(product_id, price)').eq('is_admin', false).order('created_at')
   const { data: orders } = await supabase.from('orders').select('id, merchant_id, status, total, note, created_at, pickup_time, order_items(product_name, quantity, unit), profiles(username, phone, tag)').order('created_at', { ascending: false })
   const { data: businessHours } = await supabase.from('business_hours').select('*').limit(1)
   const { data: announcements } = await supabase.from('announcements').select('*').eq('is_active', true).order('created_at', { ascending: false })
@@ -88,9 +90,9 @@ export default async function HomePage() {
 
   return (
     <main className="shell">
-      <header className="topbar"><div><span className="kicker">PRICEBOOK / CONTROL ROOM</span><h1>{locale === 'zh' ? '价格簿管理' : 'Pricebook admin'}</h1></div><div className="topbar-actions"><span className="admin-mark">ADMIN</span><LanguageToggle locale={locale} /><LogoutButton /></div></header>
-      <section className="admin-layout"><div><div className="section-heading"><div><p className="eyebrow">Catalog</p><h2>商品目录</h2></div></div><ProductEditor products={(products ?? []) as Product[]} /></div><div><div className="section-heading"><div><p className="eyebrow">Accounts</p><h2>商户档案</h2></div></div><MerchantEditor merchants={(merchants ?? []) as Merchant[]} products={(products ?? []) as Product[]} /></div></section>
-      <div className="admin-secondary"><AdminOrderPanel locale={locale} initialOrders={(orders ?? []).map((order: any) => ({ id: order.id, merchant_name: order.profiles?.username ?? '商户', merchant_phone: order.profiles?.phone ?? null, merchant_tag: order.profiles?.tag ?? null, status: order.status, total: Number(order.total), note: order.note, created_at: order.created_at, pickup_time: order.pickup_time, items: (order.order_items ?? []).map((item: any) => ({ product_name: item.product_name, quantity: Number(item.quantity), unit: item.unit })) }))} /><BusinessAndNotice businessHours={(businessHours ?? []) as any[]} announcements={(announcements ?? []) as any[]} /><MessageBoard initialMessages={(messages ?? []) as any[]} isAdmin={true} /></div>
+      <header className="topbar"><div><span className="kicker">PRICEBOOK / CONTROL ROOM</span><h1>{locale === 'zh' ? '价格簿管理' : 'Pricebook admin'}</h1></div><div className="topbar-actions"><span className="admin-mark">ADMIN</span><a className="account-link" href="/change-password">修改密码</a><LanguageToggle locale={locale} /><LogoutButton /></div></header>
+      <section className="admin-layout"><div><div className="section-heading"><div><p className="eyebrow">Catalog</p><h2>商品目录</h2></div></div><ProductEditor products={(products ?? []) as Product[]} /></div><div><MerchantAccountManager initialMerchants={(merchants ?? []).map((merchant) => ({ id: merchant.id, username: merchant.username, phone: merchant.phone, tag: merchant.tag, must_change_password: merchant.must_change_password }))} /><div className="section-heading"><div><p className="eyebrow">Accounts</p><h2>商户价格</h2></div></div><MerchantEditor merchants={(merchants ?? []) as Merchant[]} products={(products ?? []) as Product[]} /></div></section>
+      <div className="admin-secondary"><AdminOrderPanel locale={locale} initialOrders={(orders ?? []).map((order: any) => ({ id: order.id, merchant_name: order.profiles?.username ?? '商户', merchant_phone: order.profiles?.phone ?? null, merchant_tag: order.profiles?.tag ?? null, status: order.status, total: Number(order.total), note: order.note, created_at: order.created_at, pickup_time: order.pickup_time, items: (order.order_items ?? []).map((item: any) => ({ product_name: item.product_name, quantity: Number(item.quantity), unit: item.unit })) }))} /><BusinessAndNotice businessHours={(businessHours ?? []) as any[]} announcements={(announcements ?? []) as any[]} isAdmin={true} /><MessageBoard initialMessages={(messages ?? []) as any[]} isAdmin={true} /></div>
     </main>
   )
 }
